@@ -6,7 +6,9 @@ A complete, professional AI-powered voice feedback collection system. Built with
 
 ```
 voice-feedback-agent/
-├── app.py              # Professional Web Dashboard (8 Pages)
+├── streamlit_app.py    # Professional Web Dashboard (8 Pages)
+├── api/index.py        # Vercel Serverless Handler (Live Website)
+├── vercel.json         # Vercel Deployment Config
 ├── worker.py           # Cloud AI Engine (ElevenLabs + NVIDIA NIM)
 ├── .env                # Secure API Keys (ElevenLabs & NVIDIA)
 ├── requirements.txt    # All Python Dependencies
@@ -29,7 +31,7 @@ bash setup.sh
 
 ### Step 3: Start the Website Dashboard
 ```bash
-streamlit run app.py
+streamlit run streamlit_app.py
 ```
 Open the link shown (e.g., `http://localhost:8501`) in your browser.
 
