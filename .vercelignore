@@ -1,0 +1,8 @@
+src/
+.env
+PLAN.md
+feedback_bot.db
+*.db
+__pycache__/
+node_modules/
+voices/
