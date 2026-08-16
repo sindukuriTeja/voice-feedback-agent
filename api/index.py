@@ -1,68 +1,45 @@
-"""
-Vercel Serverless Handler for FeedbackBot Pro
-"""
 import json
 import os
+import sqlite3
 
-DB_NAME = os.path.join(os.path.dirname(__file__), "..", "feedback_bot.db")
+DB_PATH = "/tmp/feedback_bot.db"
+
 
 def init_db():
-    conn = __import__("sqlite3").connect(DB_NAME)
+    conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
-    c.execute('''CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT, phone TEXT UNIQUE,
-        name TEXT, status TEXT DEFAULT 'Pending',
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
-    c.execute('''CREATE TABLE IF NOT EXISTS campaigns (
-        id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, script TEXT,
-        extra_instructions TEXT DEFAULT '', status TEXT DEFAULT 'Inactive',
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
-    c.execute('''CREATE TABLE IF NOT EXISTS results (
-        id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER,
-        campaign_id INTEGER, q1 TEXT, q2 TEXT, q3 TEXT, notes TEXT,
-        sentiment TEXT DEFAULT 'Neutral', score INTEGER DEFAULT 0,
-        completed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
-    c.execute('''CREATE TABLE IF NOT EXISTS logs (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        level TEXT, message TEXT)''')
+    c.execute("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, phone TEXT UNIQUE, name TEXT, status TEXT DEFAULT 'Pending', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
+    c.execute("CREATE TABLE IF NOT EXISTS campaigns (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, script TEXT, extra_instructions TEXT DEFAULT '', status TEXT DEFAULT 'Inactive', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
+    c.execute("CREATE TABLE IF NOT EXISTS results (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, campaign_id INTEGER, q1 TEXT, q2 TEXT, q3 TEXT, notes TEXT, sentiment TEXT DEFAULT 'Neutral', score INTEGER DEFAULT 0, completed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
+    c.execute("CREATE TABLE IF NOT EXISTS logs (id INTEGER PRIMARY KEY AUTOINCREMENT, timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP, level TEXT, message TEXT)")
     conn.commit()
     conn.close()
 
+
 def handler(event, context):
     init_db()
-    headers = {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type",
-    }
+    path = event.get("path", "/")
+    method = event.get("httpMethod", "GET")
+    headers = {"Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "GET, POST, OPTIONS", "Access-Control-Allow-Headers": "Content-Type"}
 
-    if event.get("httpMethod") == "OPTIONS":
+    if method == "OPTIONS":
         return {"statusCode": 204, "headers": headers, "body": ""}
 
-    path = event.get("path", "/")
-
     if path == "/api/health":
-        return {"statusCode": 200, "headers": {**headers, "Content-Type": "application/json"},
-                "body": json.dumps({"status": "ok", "app": "FeedbackBot Pro"})}
+        return {"statusCode": 200, "headers": {**headers, "Content-Type": "application/json"}, "body": json.dumps({"status": "ok", "app": "FeedbackBot Pro"})}
 
     if path == "/api/stats":
-        import sqlite3
-        conn = sqlite3.connect(DB_NAME)
+        conn = sqlite3.connect(DB_PATH)
         total_users = conn.execute("SELECT COUNT(*) FROM users").fetchone()[0]
         completed = conn.execute("SELECT COUNT(*) FROM users WHERE status='Completed'").fetchone()[0]
         pending = conn.execute("SELECT COUNT(*) FROM users WHERE status='Pending'").fetchone()[0]
         active = conn.execute("SELECT COUNT(*) FROM campaigns WHERE status='Active'").fetchone()[0]
         avg_row = conn.execute("SELECT AVG(score) FROM results WHERE score > 0").fetchone()[0]
         conn.close()
-        return {"statusCode": 200, "headers": {**headers, "Content-Type": "application/json"},
-                "body": json.dumps({"total_users": total_users, "completed": completed,
-                    "pending": pending, "active_campaigns": active,
-                    "avg_score": round(avg_row, 1) if avg_row else 0})}
+        return {"statusCode": 200, "headers": {**headers, "Content-Type": "application/json"}, "body": json.dumps({"total_users": total_users, "completed": completed, "pending": pending, "active_campaigns": active, "avg_score": round(avg_row, 1) if avg_row else 0})}
 
-    # Default: serve the landing page
     return {"statusCode": 200, "headers": {**headers, "Content-Type": "text/html"}, "body": LANDING_PAGE}
+
 
 LANDING_PAGE = """<!DOCTYPE html>
 <html lang="en">
